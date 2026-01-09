@@ -1,0 +1,124 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}Reporte de Ventas{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <div class="filters-card">
+        <h3><i class="fas fa-filter"></i> Filtros</h3>
+        <form method="get" class="filters-form">
+            <div class="filter-group">
+                <label for="category">Categoría:</label>
+                <select name="category" id="category" class="filter-select">
+                    <option value="">Todas las categorías</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="region">Región:</label>
+                <select name="region" id="region" class="filter-select">
+                    <option value="">Todas las regiones</option>
+                    {% for reg in regions %}
+                    <option value="{{ reg }}" {% if reg == selected_region %}selected{% endif %}>{{ reg }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="btn-filter">
+                <i class="fas fa-search"></i> Filtrar
+            </button>
+            <a href="{% url 'dashboard:sales_report' %}" class="btn-clear">
+                <i class="fas fa-times"></i> Limpiar
+            </a>
+        </form>
+    </div>
+
+    <div class="table-card">
+        <div class="table-header">
+            <h3><i class="fas fa-table"></i> Datos de Ventas</h3>
+            <button class="btn-export" onclick="exportTable()">
+                <i class="fas fa-download"></i> Exportar CSV
+            </button>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="data-table" id="salesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th>Cantidad</th>
+                        <th>Precio Unitario</th>
+                        <th>Ingresos</th>
+                        <th>Región</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in sales %}
+                    <tr>
+                        <td>{{ sale.id }}</td>
+                        <td>{{ sale.date|date:"d/m/Y" }}</td>
+                        <td>{{ sale.product }}</td>
+                        <td><span class="badge">{{ sale.category }}</span></td>
+                        <td>{{ sale.quantity }}</td>
+                        <td>${{ sale.price }}</td>
+                        <td class="revenue">${{ sale.revenue }}</td>
+                        <td>{{ sale.region }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center">No hay datos disponibles con los filtros seleccionados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportTable() {
+    const table = document.getElementById('salesTable');
+    let csv = [];
+    
+    // Headers
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+    csv.push(headers.join(','));
+    
+    // Rows
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const cols = Array.from(row.querySelectorAll('td')).map(td => {
+            let text = td.textContent.trim();
+            // Escapar comillas y comas
+            if (text.includes(',') || text.includes('"')) {
+                text = '"' + text.replace(/"/g, '""') + '"';
+            }
+            return text;
+        });
+        if (cols.length > 0 && cols[0] !== '') {
+            csv.push(cols.join(','));
+        }
+    });
+    
+    // Descargar
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'reporte_ventas.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}

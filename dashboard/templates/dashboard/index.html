@@ -1,0 +1,175 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}Inicio - Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- KPI Cards -->
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="kpi-info">
+                <h3>Ingresos Totales</h3>
+                <p class="kpi-value">${{ total_revenue|floatformat:2 }}</p>
+                <span class="kpi-label">Total acumulado</span>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <i class="fas fa-box"></i>
+            </div>
+            <div class="kpi-info">
+                <h3>Unidades Vendidas</h3>
+                <p class="kpi-value">{{ total_quantity }}</p>
+                <span class="kpi-label">Total productos</span>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="kpi-info">
+                <h3>Precio Promedio</h3>
+                <p class="kpi-value">${{ avg_price|floatformat:2 }}</p>
+                <span class="kpi-label">Por unidad</span>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <i class="fas fa-cubes"></i>
+            </div>
+            <div class="kpi-info">
+                <h3>Productos Únicos</h3>
+                <p class="kpi-value">{{ total_products }}</p>
+                <span class="kpi-label">Diferentes productos</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-container">
+        <div class="chart-card">
+            <h3><i class="fas fa-chart-pie"></i> Ventas por Categoría</h3>
+            <canvas id="categoryChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h3><i class="fas fa-map-marker-alt"></i> Ventas por Región</h3>
+            <canvas id="regionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent Sales Table -->
+    <div class="table-card">
+        <h3><i class="fas fa-list"></i> Ventas Recientes</h3>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Ingresos</th>
+                        <th>Región</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in recent_sales %}
+                    <tr>
+                        <td>{{ sale.date|date:"d/m/Y" }}</td>
+                        <td>{{ sale.product }}</td>
+                        <td><span class="badge">{{ sale.category }}</span></td>
+                        <td>{{ sale.quantity }}</td>
+                        <td>${{ sale.price }}</td>
+                        <td class="revenue">${{ sale.revenue }}</td>
+                        <td>{{ sale.region }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No hay datos disponibles</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Gráfico de Categorías
+fetch('{% url "dashboard:chart_data" %}?type=sales_by_category')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: [
+                        '#667eea',
+                        '#764ba2',
+                        '#f093fb',
+                        '#f5576c',
+                        '#4facfe',
+                        '#00f2fe'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    });
+
+// Gráfico de Regiones
+fetch('{% url "dashboard:chart_data" %}?type=sales_by_region')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('regionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Ventas por Región',
+                    data: data.values,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

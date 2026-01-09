@@ -1,0 +1,158 @@
+{% extends 'dashboard/base.html' %}
+
+{% block page_title %}Análisis Avanzado{% endblock %}
+
+{% block content %}
+<div class="analytics-grid">
+    <!-- Estadísticas -->
+    <div class="stats-container">
+        <h2><i class="fas fa-calculator"></i> Estadísticas Descriptivas</h2>
+        
+        <div class="stats-grid">
+            <div class="stat-item">
+                <h4>Media de Ingresos</h4>
+                <p class="stat-value">${{ stats.revenue_mean|floatformat:2 }}</p>
+            </div>
+            <div class="stat-item">
+                <h4>Mediana de Ingresos</h4>
+                <p class="stat-value">${{ stats.revenue_median|floatformat:2 }}</p>
+            </div>
+            <div class="stat-item">
+                <h4>Desviación Estándar</h4>
+                <p class="stat-value">${{ stats.revenue_std|floatformat:2 }}</p>
+            </div>
+            <div class="stat-item">
+                <h4>Cantidad Promedio</h4>
+                <p class="stat-value">{{ stats.quantity_mean|floatformat:0 }}</p>
+            </div>
+        </div>
+
+        <div class="insights">
+            <div class="insight-card">
+                <i class="fas fa-trophy"></i>
+                <div>
+                    <h4>Producto Top</h4>
+                    <p>{{ stats.top_product }}</p>
+                </div>
+            </div>
+            <div class="insight-card">
+                <i class="fas fa-star"></i>
+                <div>
+                    <h4>Categoría Top</h4>
+                    <p>{{ stats.top_category }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Tendencias -->
+    <div class="chart-card full-width">
+        <h3><i class="fas fa-chart-area"></i> Tendencia de Ventas Mensuales</h3>
+        <canvas id="trendChart"></canvas>
+    </div>
+
+    <!-- Top Productos -->
+    <div class="table-card full-width">
+        <h3><i class="fas fa-medal"></i> Top 10 Productos por Ingresos</h3>
+        <div class="products-list">
+            {% for product, revenue in top_products.items %}
+            <div class="product-item">
+                <span class="product-name">{{ product }}</span>
+                <span class="product-revenue">${{ revenue|floatformat:2 }}</span>
+                <div class="product-bar">
+                    <div class="product-bar-fill" data-width="{{ revenue|floatformat:0 }}"></div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-center">No hay datos disponibles</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Tabla de Ventas Diarias -->
+    <div class="table-card full-width">
+        <h3><i class="fas fa-calendar-day"></i> Ventas Diarias</h3>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Ingresos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in daily_sales %}
+                    <tr>
+                        <td>{{ sale.date|date:"d/m/Y" }}</td>
+                        <td class="revenue">${{ sale.revenue|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center">No hay datos disponibles</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Aplicar anchos dinámicos a las barras de productos
+document.querySelectorAll('.product-bar-fill').forEach(bar => {
+    const width = bar.getAttribute('data-width');
+    bar.style.width = width + '%';
+});
+
+// Gráfico de Tendencias
+fetch('{% url "dashboard:chart_data" %}?type=sales_by_month')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Ingresos Mensuales',
+                    data: data.values,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
