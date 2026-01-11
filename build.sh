@@ -1,13 +1,16 @@
-#!/bin/bash
-# Script para inicializar la aplicación en Render
+#!/usr/bin/env bash
+set -o errexit
 
-echo "Ejecutando migraciones..."
+echo "Installing dependencies..."
+pip install -r requirements.txt
+
+echo "Running migrations..."
 python manage.py migrate --noinput
 
-echo "Generando datos de ejemplo..."
+echo "Generating sample data..."
 python manage.py generate_sample_data
 
-echo "Recolectando archivos estáticos..."
-python manage.py collectstatic --noinput
+echo "Collecting static files..."
+python manage.py collectstatic --noinput --clear
 
-echo "¡Aplicación lista!"
+echo "✓ Build complete!"
